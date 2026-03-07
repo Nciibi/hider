@@ -57,6 +57,7 @@ def main():
     universal_parser.add_argument("file", help="Target file")
     universal_parser.add_argument("--mode", choices=["hide", "extract", "hta-polyglot"], required=True)
     universal_parser.add_argument("--data", help="Data to hide or script for HTA")
+    universal_parser.add_argument("--obfuscate", action="store_true", help="Enable evasion obfuscation")
     universal_parser.add_argument("--out", help="Output path")
 
     # PDF commands
@@ -65,6 +66,7 @@ def main():
     pdf_parser.add_argument("--mode", choices=["view", "edit", "open-action"], required=True)
     pdf_parser.add_argument("--key", help="Metadata key (e.g. /Title)")
     pdf_parser.add_argument("--value", help="Metadata value or JS script")
+    pdf_parser.add_argument("--obfuscate", action="store_true", help="Enable JS obfuscation")
     pdf_parser.add_argument("--out", help="Output path")
 
     # Office commands
@@ -222,7 +224,7 @@ def main():
                 else:
                     print("No hidden data found.")
             elif args.mode == "hta-polyglot":
-                UniversalEngine.create_hta_polyglot(args.file, args.data, args.out)
+                UniversalEngine.create_hta_polyglot(args.file, args.data, args.out, obfuscate=args.obfuscate)
                 print(f"Successfully created HTA polyglot: {args.out or args.file}")
 
         elif args.command == "pdf":
@@ -245,7 +247,10 @@ def main():
                 if not args.value:
                     print("Error: --value required for JavaScript payload")
                     sys.exit(1)
-                handler.inject_open_action(args.value, args.out)
+                if args.obfuscate:
+                    handler.inject_obfuscated_js(args.value, args.out)
+                else:
+                    handler.inject_open_action(args.value, args.out)
                 print(f"Injected OpenAction JS in {args.out or args.file}")
 
         elif args.command == "office":

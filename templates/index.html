@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hider | Advanced Steganography</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    
+    <main class="container">
+        <header class="glass animate-in">
+            <h1>Hider<span>.io</span></h1>
+            <p>Advanced Metadata & Steganography Engine</p>
+        </header>
+
+        <section class="main-card glass animate-in-delay">
+            <form id="hider-form">
+                <div class="drop-zone" id="drop-zone">
+                    <span class="drop-zone__prompt">Drop file here or click to upload</span>
+                    <input type="file" name="file" id="file-input" class="drop-zone__input">
+                </div>
+
+                <div class="settings-grid">
+                    <div class="input-group">
+                        <label>Command Type</label>
+                        <select name="command" id="command-select">
+                            <option value="universal">Universal (Tail-loading)</option>
+                            <option value="pdf">PDF Manipulation</option>
+                            <option value="office">Office Document</option>
+                            <option value="dll">DLL / PE Hiding</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Mode</label>
+                        <select name="mode" id="mode-select">
+                            <!-- Dynamic -->
+                        </select>
+                    </div>
+                </div>
+
+                <div id="dynamic-inputs">
+                    <div class="input-group" id="data-group">
+                        <label id="data-label">Payload / Data</label>
+                        <textarea name="data" placeholder="Enter payload..."></textarea>
+                    </div>
+                    
+                    <div class="checkbox-group" id="obfuscate-group">
+                        <input type="checkbox" name="obfuscate" id="obfuscate" value="true">
+                        <label for="obfuscate">Enable Advanced Evasion (Obfuscation)</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submit-btn">
+                    <span class="btn-text">Process File</span>
+                    <div class="loader hidden"></div>
+                </button>
+            </form>
+            
+            <div id="result-area" class="hidden animate-in">
+                <div class="success-banner">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Success! File processed.</span>
+                </div>
+                <a id="download-link" href="#" class="btn-secondary">Download Result</a>
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

