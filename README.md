@@ -1,16 +1,19 @@
 # Hider: Universal Metadata & Steganography Tool
 
-Hider is a powerful command-line utility designed for security researchers and penetration testers. It allows for the manipulation of metadata across a wide range of file formats, providing capabilities for spoofing, data concealment (steganography), and security testing.
+Hider is a powerful command-line and web-based utility designed for security researchers and penetration testers. It allows for the manipulation of metadata across a wide range of file formats, providing capabilities for spoofing, data concealment (steganography), and security testing.
+
+![Hider Dashboard](file:///home/tyrel/.gemini/antigravity/brain/0acb7b5b-dd1d-4560-ae06-d1ffb10ce075/hider_gui_dashboard_1772899800643.png)
 
 ## 🚀 Features
 
+- **Hider Dashboard (GUI)**: A modern, glassmorphic web interface for easy file processing.
+- **Advanced Evasion**: HTA obfuscation and PDF JS encoding to bypass AV/EDR (Windows Defender).
 - **EXIF Manipulation**: View, edit, and inject payloads into image metadata (JPG, TIFF).
 - **Security Payloads**: Predefined injections for XSS, Buffer Overflows, and Null Byte testing.
 - **Universal Steganography**: "Tail-loading" technique to hide data in *any* binary file.
-- **PDF Support**: Deep metadata editing and object injection.
+- **PDF Support**: Deep metadata editing, JavaScript injection, and object manipulation.
 - **Office Support**: Full core property manipulation for Word (`.docx`), Excel (`.xlsx`), and PowerPoint (`.pptx`).
 - **DLL / PE Support**: Structural data hiding in Windows executables and libraries.
-- **JPEG Exploits**: Advanced segment manipulation (Pre-header and EOI trailing data).
 
 ## 🛠️ Installation
 
@@ -24,35 +27,37 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Install dependencies
-pip install Pillow piexif pypdf python-docx openpyxl python-pptx pefile
+pip install Pillow piexif pypdf python-docx openpyxl python-pptx pefile flask
 ```
 
-## 📖 Usage Examples
+## 🖥️ Usage: Hider Dashboard (GUI)
 
-### 1. Image EXIF Injection (XSS)
+To launch the web interface:
+```bash
+python3 app.py
+```
+Open your browser and navigate to `http://127.0.0.1:5000`.
+
+## 📖 Usage: CLI Examples
+
+### 1. Advanced Evasion (Obfuscated PDF JS)
+```bash
+python3 hider.py pdf document.pdf --mode open-action --value "app.alert('Hello');" --obfuscate
+```
+
+### 2. HTA Polyglot with AMSI Bypass
+```bash
+python3 hider.py universal image.jpg --mode hta-polyglot --data "msgbox 'Hello'" --obfuscate --out payload.hta
+```
+
+### 3. Image EXIF Injection (XSS)
 ```bash
 python3 hider.py inject image.jpg --type xss --out malicious.jpg
 ```
 
-### 2. Universal Data Hiding (Any Format)
+### 4. Universal Data Hiding
 ```bash
 python3 hider.py universal secret.pdf --mode hide --data 'SENSITIVE_INFO'
-python3 hider.py universal secret.pdf --mode extract
-```
-
-### 3. PDF Metadata Editing
-```bash
-python3 hider.py pdf document.pdf --mode edit --key /Author --value 'Anonymous'
-```
-
-### 4. Office Document Spoofing
-```bash
-python3 hider.py office report.docx --mode edit --key author --value 'Trusted User'
-```
-
-### 5. DLL Steganography
-```bash
-python3 hider.py dll plugin.dll --mode hide --data 'C2_SERVER_URL'
 ```
 
 ## ⚠️ Disclaimer
