@@ -4,6 +4,8 @@ import argparse
 from metadata_engine import MetadataEngine
 from universal_engine import UniversalEngine
 from pdf_handler import PDFHandler
+from office_handler import OfficeHandler
+from pe_handler import PEHandler
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -39,7 +41,7 @@ def main():
 
     # Extract command
     extract_parser = subparsers.add_parser("extract", help="Extract hidden data from metadata")
-    extract_parser.add_argument("image", help="Path to the image file")
+    extract_parser.add_argument("file", help="Path to the image file")
     extract_parser.add_argument("--tag", default=37510, type=int, help="Tag ID to extract from")
     extract_parser.add_argument("--out", help="File to save extracted data")
 
@@ -65,6 +67,21 @@ def main():
     pdf_parser.add_argument("--value", help="Metadata value")
     pdf_parser.add_argument("--out", help="Output path")
 
+    # Office commands
+    office_parser = subparsers.add_parser("office", help="Office (DOCX, XLSX, PPTX) metadata manipulation")
+    office_parser.add_argument("file", help="Target Office file")
+    office_parser.add_argument("--mode", choices=["view", "edit"], required=True)
+    office_parser.add_argument("--key", help="Property key (e.g. author, title, category)")
+    office_parser.add_argument("--value", help="Property value")
+    office_parser.add_argument("--out", help="Output path")
+
+    # DLL / PE commands
+    dll_parser = subparsers.add_parser("dll", help="DLL/EXE metadata manipulation")
+    dll_parser.add_argument("file", help="Target DLL file")
+    dll_parser.add_argument("--mode", choices=["view", "hide", "extract"], required=True)
+    dll_parser.add_argument("--data", help="Data to hide")
+    dll_parser.add_argument("--out", help="Output path")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -72,16 +89,23 @@ def main():
         sys.exit(0)
 
     try:
+        filenames = {
+            "view": "image", "edit": "image", "inject": "image", "hide": "image", "extract": "file",
+            "exploit-structure": "image", "universal": "file", "pdf": "file", "office": "file", "dll": "file"
+        }
+        
+        # Determine target file path based on command
+        target_path = getattr(args, filenames.get(args.command, "file"), None)
+
         if args.command in ["view", "edit", "inject", "hide", "extract"]:
-            engine = MetadataEngine(args.image)
+            engine = MetadataEngine(target_path)
             
             if args.command == "view":
                 engine.view_pretty()
         
-        elif args.command == "edit":
-            # Note: value parsing might need sophistication for types (bytes vs str vs int)
-            engine.update_tag(args.ifd, args.tag, args.value)
-            engine.save(args.out)
+            elif args.command == "edit":
+                engine.update_tag(args.ifd, args.tag, args.value)
+                engine.save(args.out)
 
         elif args.command == "inject":
             payload = args.payload
@@ -214,6 +238,40 @@ def main():
                     sys.exit(1)
                 handler.update_metadata(args.key, args.value, args.out)
                 print(f"Updated PDF metadata in {args.out or args.file}")
+
+        elif args.command == "office":
+            handler = OfficeHandler(args.file)
+            if args.mode == "view":
+                meta = handler.get_metadata()
+                print(f"--- Office Metadata ({os.path.basename(args.file)}) ---")
+                for k, v in meta.items():
+                    print(f"{k}: {v}")
+            elif args.mode == "edit":
+                if not args.key or not args.value:
+                    print("Error: --key and --value required for edit mode")
+                    sys.exit(1)
+                handler.update_metadata(args.key, args.value, args.out)
+                print(f"Updated Office metadata in {args.out or args.file}")
+
+        elif args.command == "dll":
+            handler = PEHandler(args.file)
+            if args.mode == "view":
+                info = handler.get_info()
+                print(f"--- PE Info ({os.path.basename(args.file)}) ---")
+                for k, v in info.items():
+                    print(f"{k}: {v}")
+            elif args.mode == "hide":
+                if not args.data:
+                    print("Error: --data required for hide mode")
+                    sys.exit(1)
+                handler.update_version_string("HiderData", args.data, args.out)
+                print(f"Successfully hid data in {args.out or args.file}")
+            elif args.mode == "extract":
+                data = UniversalEngine.tail_extract(args.file)
+                if data:
+                    print(f"Extracted: {data.decode(errors='ignore')}")
+                else:
+                    print("No hidden data found.")
 
     except Exception as e:
         print(f"Error: {e}")
