@@ -55,16 +55,16 @@ def main():
     # Universal commands
     universal_parser = subparsers.add_parser("universal", help="Universal file manipulation (tail-loading)")
     universal_parser.add_argument("file", help="Target file")
-    universal_parser.add_argument("--mode", choices=["hide", "extract"], required=True)
-    universal_parser.add_argument("--data", help="Data to hide (for hide mode)")
+    universal_parser.add_argument("--mode", choices=["hide", "extract", "hta-polyglot"], required=True)
+    universal_parser.add_argument("--data", help="Data to hide or script for HTA")
     universal_parser.add_argument("--out", help="Output path")
 
     # PDF commands
     pdf_parser = subparsers.add_parser("pdf", help="PDF metadata manipulation")
     pdf_parser.add_argument("file", help="Target PDF file")
-    pdf_parser.add_argument("--mode", choices=["view", "edit"], required=True)
+    pdf_parser.add_argument("--mode", choices=["view", "edit", "open-action"], required=True)
     pdf_parser.add_argument("--key", help="Metadata key (e.g. /Title)")
-    pdf_parser.add_argument("--value", help="Metadata value")
+    pdf_parser.add_argument("--value", help="Metadata value or JS script")
     pdf_parser.add_argument("--out", help="Output path")
 
     # Office commands
@@ -221,6 +221,9 @@ def main():
                     print(f"Extracted: {data.decode(errors='ignore')}")
                 else:
                     print("No hidden data found.")
+            elif args.mode == "hta-polyglot":
+                UniversalEngine.create_hta_polyglot(args.file, args.data, args.out)
+                print(f"Successfully created HTA polyglot: {args.out or args.file}")
 
         elif args.command == "pdf":
             handler = PDFHandler(args.file)
@@ -238,6 +241,12 @@ def main():
                     sys.exit(1)
                 handler.update_metadata(args.key, args.value, args.out)
                 print(f"Updated PDF metadata in {args.out or args.file}")
+            elif args.mode == "open-action":
+                if not args.value:
+                    print("Error: --value required for JavaScript payload")
+                    sys.exit(1)
+                handler.inject_open_action(args.value, args.out)
+                print(f"Injected OpenAction JS in {args.out or args.file}")
 
         elif args.command == "office":
             handler = OfficeHandler(args.file)

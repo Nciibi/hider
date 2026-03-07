@@ -36,3 +36,22 @@ class PDFHandler:
         # Simple implementation using metadata for now, 
         # but could be expanded to actual stream objects.
         return self.update_metadata("/HiderPayload", data, output_path)
+
+    def inject_open_action(self, script, output_path=None):
+        """Injects a JavaScript /OpenAction into the PDF."""
+        if output_path is None:
+            output_path = self.pdf_path
+
+        reader = PdfReader(self.pdf_path)
+        writer = PdfWriter()
+        
+        for page in reader.pages:
+            writer.add_page(page)
+
+        # Add JavaScript that runs on open
+        writer.add_js(script)
+        
+        with open(output_path, "wb") as f:
+            writer.write(f)
+        
+        return output_path
