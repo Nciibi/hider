@@ -35,6 +35,16 @@ document.addEventListener('DOMContentLoaded', () => {
             modes: ['view', 'edit'],
             labels: { edit: 'Value' },
             showObfuscate: []
+        },
+        lsb: {
+            modes: ['hide', 'extract'],
+            labels: { hide: 'Data to hide' },
+            showObfuscate: []
+        },
+        shortcut: {
+            modes: ['generate'],
+            labels: { generate: 'Command to execute' },
+            showObfuscate: []
         }
     };
 

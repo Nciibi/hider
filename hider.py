@@ -7,6 +7,8 @@ from pdf_handler import PDFHandler
 from office_handler import OfficeHandler
 from pe_handler import PEHandler
 from video_handler import VideoHandler
+from lsb_engine import LSBEngine
+from lnk_handler import LNKHandler
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -91,6 +93,19 @@ def main():
     video_parser.add_argument("--key", help="Metadata key (e.g. title, comment, artist)")
     video_parser.add_argument("--value", help="Metadata value")
     video_parser.add_argument("--out", help="Output path")
+
+    # LSB commands
+    lsb_parser = subparsers.add_parser("lsb", help="LSB (Least Significant Bit) Steganography")
+    lsb_parser.add_argument("file", help="Target Image file")
+    lsb_parser.add_argument("--mode", choices=["hide", "extract"], required=True)
+    lsb_parser.add_argument("--data", help="Data to hide")
+    lsb_parser.add_argument("--out", help="Output path")
+
+    # Shortcut (LNK) commands
+    lnk_parser = subparsers.add_parser("shortcut", help="Generate Malicious .lnk Shortcuts")
+    lnk_parser.add_argument("--cmd", required=True, help="Command to execute")
+    lnk_parser.add_argument("--out", required=True, help="Output .lnk path")
+    lnk_parser.add_argument("--icon", help="Icon path (optional)")
 
     args = parser.parse_args()
 
@@ -311,6 +326,24 @@ def main():
                     sys.exit(1)
                 handler.update_metadata(args.key, args.value, args.out)
                 print(f"Updated Video metadata in {args.out or args.file}")
+
+        elif args.command == "lsb":
+            if args.mode == "hide":
+                if not args.data:
+                    print("Error: --data required for hide mode")
+                    sys.exit(1)
+                LSBEngine.encode(args.file, args.data, args.out or args.file)
+                print(f"Successfully hid data via LSB in {args.out or args.file}")
+            elif args.mode == "extract":
+                data = LSBEngine.decode(args.file)
+                if data:
+                    print(f"Extracted: {data}")
+                else:
+                    print("No LSB data found.")
+
+        elif args.command == "shortcut":
+            LNKHandler.create_lnk_payload(args.cmd, args.out, args.icon)
+            print(f"Successfully generated malicious shortcut: {args.out}")
 
     except Exception as e:
         print(f"Error: {e}")
