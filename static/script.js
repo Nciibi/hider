@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
             modes: ['view', 'hide', 'extract'],
             labels: { hide: 'Data to hide' },
             showObfuscate: []
+        },
+        video: {
+            modes: ['view', 'edit'],
+            labels: { edit: 'Value' },
+            showObfuscate: []
         }
     };
 

@@ -2,7 +2,7 @@ import os
 import secrets
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler
+from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -72,6 +72,13 @@ def process():
             handler = PEHandler(input_path)
             data = request.form.get('data', '')
             handler.update_version_string("HiderData", data, output_path)
+
+        elif command == 'video':
+            handler = VideoHandler(input_path)
+            key = request.form.get('key', '')
+            value = request.form.get('value', '')
+            if mode == 'edit':
+                handler.update_metadata(key, value, output_path)
 
         return jsonify({'success': True, 'filename': output_filename})
     

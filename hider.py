@@ -6,6 +6,7 @@ from universal_engine import UniversalEngine
 from pdf_handler import PDFHandler
 from office_handler import OfficeHandler
 from pe_handler import PEHandler
+from video_handler import VideoHandler
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -83,6 +84,13 @@ def main():
     dll_parser.add_argument("--mode", choices=["view", "hide", "extract"], required=True)
     dll_parser.add_argument("--data", help="Data to hide")
     dll_parser.add_argument("--out", help="Output path")
+    # Video commands
+    video_parser = subparsers.add_parser("video", help="Video (MP4, MKV, etc.) metadata manipulation")
+    video_parser.add_argument("file", help="Target Video file")
+    video_parser.add_argument("--mode", choices=["view", "edit"], required=True)
+    video_parser.add_argument("--key", help="Metadata key (e.g. title, comment, artist)")
+    video_parser.add_argument("--value", help="Metadata value")
+    video_parser.add_argument("--out", help="Output path")
 
     args = parser.parse_args()
 
@@ -286,6 +294,23 @@ def main():
                     print(f"Extracted: {data.decode(errors='ignore')}")
                 else:
                     print("No hidden data found.")
+
+        elif args.command == "video":
+            handler = VideoHandler(args.file)
+            if args.mode == "view":
+                meta = handler.get_metadata()
+                print(f"--- Video Metadata ({os.path.basename(args.file)}) ---")
+                if meta:
+                    for k, v in meta.items():
+                        print(f"{k}: {v}")
+                else:
+                    print("No metadata found.")
+            elif args.mode == "edit":
+                if not args.key or not args.value:
+                    print("Error: --key and --value required for edit mode")
+                    sys.exit(1)
+                handler.update_metadata(args.key, args.value, args.out)
+                print(f"Updated Video metadata in {args.out or args.file}")
 
     except Exception as e:
         print(f"Error: {e}")

@@ -2,7 +2,7 @@
 
 Hider is a powerful command-line and web-based utility designed for security researchers and penetration testers. It allows for the manipulation of metadata across a wide range of file formats, providing capabilities for spoofing, data concealment (steganography), and security testing.
 
-![Hider Dashboard](file:///home/tyrel/.gemini/antigravity/brain/0acb7b5b-dd1d-4560-ae06-d1ffb10ce075/hider_gui_dashboard_1772899800643.png)
+![Hider Dashboard](assets/gui_main.png)
 
 ## 🚀 Features
 
