@@ -13,72 +13,119 @@ document.addEventListener('DOMContentLoaded', () => {
     const config = {
         universal: {
             modes: ['hide', 'extract', 'hta-polyglot'],
-            labels: { hide: 'Data to hide', 'hta-polyglot': 'Script Template' },
-            showObfuscate: ['hta-polyglot']
+            labels: { hide: 'Data to hide', 'hta-polyglot': 'VBScript / Command to run (e.g. calc.exe)' },
+            showObfuscate: ['hta-polyglot'],
+            showPassword: ['hide', 'extract']
         },
         pdf: {
             modes: ['view', 'edit', 'open-action'],
-            labels: { edit: 'Value', 'open-action': 'JS Payload' },
-            showObfuscate: ['open-action']
+            labels: { edit: 'New Value', 'open-action': 'JavaScript (e.g. app.alert("X");)' },
+            showObfuscate: ['open-action'],
+            showPassword: []
         },
         office: {
             modes: ['view', 'edit'],
             labels: { edit: 'Value' },
-            showObfuscate: []
+            showObfuscate: [],
+            showPassword: []
         },
         dll: {
             modes: ['view', 'hide', 'extract'],
             labels: { hide: 'Data to hide' },
-            showObfuscate: []
+            showObfuscate: [],
+            showPassword: []
         },
         video: {
             modes: ['view', 'edit'],
             labels: { edit: 'Value' },
-            showObfuscate: []
+            showObfuscate: [],
+            showPassword: []
         },
         lsb: {
             modes: ['hide', 'extract'],
             labels: { hide: 'Data to hide' },
-            showObfuscate: []
+            showObfuscate: [],
+            showPassword: ['hide', 'extract']
+        },
+        audio: {
+            modes: ['hide', 'extract'],
+            labels: { hide: 'Data to hide' },
+            showObfuscate: [],
+            showPassword: ['hide', 'extract']
+        },
+        archive: {
+            modes: ['hide', 'extract'],
+            labels: { hide: 'Data to hide' },
+            showObfuscate: [],
+            showPassword: ['hide', 'extract']
         },
         shortcut: {
             modes: ['generate'],
             labels: { generate: 'Command to execute' },
-            showObfuscate: []
+            showObfuscate: [],
+            showPassword: []
         }
     };
 
-    function updateModes() {
-        const cmd = commandSelect.value;
-        const modes = config[cmd].modes;
-        modeSelect.innerHTML = modes.map(m => `<option value="${m}">${m.charAt(0).toUpperCase() + m.slice(1)}</option>`).join('');
-        updateInputs();
-    }
-
-    function updateInputs() {
+    function updateForm() {
         const cmd = commandSelect.value;
         const mode = modeSelect.value;
-        const labels = config[cmd].labels;
+        const cnf = config[cmd];
+
         const dataGroup = document.getElementById('data-group');
         const obfuscateGroup = document.getElementById('obfuscate-group');
         const dataLabel = document.getElementById('data-label');
+        const keyGroup = document.getElementById('key-group'); // Assuming this element exists in HTML
 
-        if (labels[mode]) {
-            dataGroup.classList.remove('hidden');
-            dataLabel.textContent = labels[mode];
-        } else {
-            dataGroup.classList.add('hidden');
+        // Ensure mode is valid for command
+        if (!cnf.modes.includes(modeSelect.value)) {
+            modeSelect.innerHTML = cnf.modes.map(m => `<option value="${m}">${m.replace('-', ' ')}</option>`).join('');
+            modeSelect.value = cnf.modes[0];
         }
 
-        if (config[cmd].showObfuscate.includes(mode)) {
-            obfuscateGroup.classList.remove('hidden');
+        const currentMode = modeSelect.value;
+
+        // Toggle Key/Value vs Data
+        if (['edit'].includes(currentMode) && ['pdf', 'office', 'video'].includes(cmd)) {
+            keyGroup.style.display = 'block';
+            dataGroup.style.display = 'block';
+            dataLabel.textContent = cnf.labels[currentMode] || 'Value';
+        } else if (['view', 'extract'].includes(currentMode)) {
+            keyGroup.style.display = 'none';
+            dataGroup.style.display = 'none';
+            if (cmd === 'dll' && currentMode === 'hide') {
+                 dataGroup.style.display = 'block';
+                 dataLabel.textContent = 'Data to hide';
+            }
         } else {
-            obfuscateGroup.classList.add('hidden');
+            keyGroup.style.display = 'none';
+            dataGroup.style.display = 'block';
+            dataLabel.textContent = cnf.labels[currentMode] || 'Payload / Data';
+        }
+        
+        // Hide Data field for view/extract universally
+        if(currentMode === 'view' || currentMode === 'extract') {
+             dataGroup.style.display = 'none';
+        }
+
+        // Toggle Obfuscate
+        if (cnf.showObfuscate && cnf.showObfuscate.includes(currentMode)) {
+            obfuscateGroup.style.display = 'flex';
+        } else {
+            obfuscateGroup.style.display = 'none';
+        }
+
+        // Toggle Password
+        const passwordGroup = document.getElementById('password-group'); // Assuming this element exists in HTML
+        if (cnf.showPassword && cnf.showPassword.includes(currentMode)) {
+            passwordGroup.style.display = 'block';
+        } else {
+            passwordGroup.style.display = 'none';
         }
     }
 
-    commandSelect.addEventListener('change', updateModes);
-    modeSelect.addEventListener('change', updateInputs);
+    commandSelect.addEventListener('change', updateForm);
+    modeSelect.addEventListener('change', updateForm);
 
     // Initial load
     updateModes();

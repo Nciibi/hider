@@ -36,6 +36,8 @@
                             <option value="office">Office Document</option>
                             <option value="dll">DLL / PE Hiding</option>
                             <option value="video">Video Manipulation</option>
+                            <option value="audio">Audio (.WAV) Steganography</option>
+                            <option value="archive">Archive (.ZIP) Steganography</option>
                             <option value="lsb">LSB Steganography</option>
                             <option value="shortcut">Shortcut (.LNK) Evasion</option>
                         </select>
@@ -50,12 +52,17 @@
                 </div>
 
                 <div id="dynamic-inputs">
-                    <div class="input-group" id="data-group">
-                        <label id="data-label">Payload / Data</label>
-                        <textarea name="data" placeholder="Enter payload..."></textarea>
+                    <div class="form-group" id="data-group" style="display: none;">
+                        <label id="data-label" for="data-input">Payload / Data</label>
+                        <textarea id="data-input" name="data" rows="4"></textarea>
                     </div>
-                    
-                    <div class="checkbox-group" id="obfuscate-group">
+
+                    <div class="form-group" id="password-group" style="display: none;">
+                        <label for="password-input">AES-256 Encryption Password (Optional)</label>
+                        <input type="password" id="password-input" name="password" placeholder="Leave blank for unencrypted">
+                    </div>
+
+                    <div class="form-check" id="obfuscate-group" style="display: none;">
                         <input type="checkbox" name="obfuscate" id="obfuscate" value="true">
                         <label for="obfuscate">Enable Advanced Evasion (Obfuscation)</label>
                     </div>

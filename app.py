@@ -2,7 +2,7 @@ import os
 import secrets
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler
+from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler, EncryptionEngine, AudioHandler, ArchiveHandler
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -40,8 +40,28 @@ def process():
     try:
         if command == 'universal':
             data = request.form.get('data', '')
+            password = request.form.get('password', '')
+            
             if mode == 'hide':
-                UniversalEngine.tail_hide(input_path, data.encode(), output_path)
+                payload = data.encode()
+                if password:
+                    b64_cipher = EncryptionEngine.encrypt(payload, password)
+                    payload = b"ENC:" + b64_cipher
+
+                UniversalEngine.tail_hide(input_path, payload, output_path)
+            elif mode == 'extract':
+                extracted = UniversalEngine.tail_extract(input_path)
+                result = ""
+                if extracted:
+                    if extracted.startswith(b"ENC:") and password:
+                        try:
+                            decrypted = EncryptionEngine.decrypt(extracted[4:], password)
+                            result = decrypted.decode(errors='ignore')
+                        except Exception as e:
+                            result = f"Failed to decrypt: Incorrect password or corrupted data."
+                    else:
+                        result = extracted.decode(errors='ignore')
+                return jsonify({'success': True, 'extracted': result})
             elif mode == 'hta-polyglot':
                 obfuscate = request.form.get('obfuscate') == 'true'
                 UniversalEngine.create_hta_polyglot(input_path, data, output_path, obfuscate=obfuscate)
@@ -82,11 +102,62 @@ def process():
 
         elif command == 'lsb':
             data = request.form.get('data', '')
+            password = request.form.get('password', '')
             if mode == 'hide':
-                LSBEngine.encode(input_path, data, output_path)
+                payload_str = data
+                if password:
+                    b64_cipher = EncryptionEngine.encrypt(payload_str, password)
+                    payload_str = "ENC:" + b64_cipher.decode('utf-8')
+                LSBEngine.encode(input_path, payload_str, output_path)
             elif mode == 'extract':
                 extracted = LSBEngine.decode(input_path)
+                if extracted and extracted.startswith("ENC:") and password:
+                    try:
+                        decrypted = EncryptionEngine.decrypt(extracted[4:].encode('utf-8'), password)
+                        extracted = decrypted.decode(errors='ignore')
+                    except Exception as e:
+                        extracted = f"Failed to decrypt: Incorrect password or corrupted data."
+        elif command == 'audio':
+            data = request.form.get('data', '')
+            password = request.form.get('password', '')
+            if mode == 'hide':
+                payload_str = data
+                if password:
+                    b64_cipher = EncryptionEngine.encrypt(payload_str, password)
+                    payload_str = "ENC:" + b64_cipher.decode('utf-8')
+                AudioHandler.encode(input_path, payload_str, output_path)
+            elif mode == 'extract':
+                extracted = AudioHandler.decode(input_path)
+                if extracted and extracted.startswith("ENC:") and password:
+                    try:
+                        decrypted = EncryptionEngine.decrypt(extracted[4:].encode('utf-8'), password)
+                        extracted = decrypted.decode(errors='ignore')
+                    except Exception as e:
+                        extracted = f"Failed to decrypt: Incorrect password or corrupted data."
                 return jsonify({'success': True, 'extracted': extracted})
+                
+        elif command == 'archive':
+            data = request.form.get('data', '')
+            password = request.form.get('password', '')
+            if mode == 'hide':
+                payload = data.encode()
+                if password:
+                    b64_cipher = EncryptionEngine.encrypt(payload, password)
+                    payload = b"ENC:" + b64_cipher
+                ArchiveHandler.encode(input_path, payload, output_path)
+            elif mode == 'extract':
+                extracted = ArchiveHandler.decode(input_path)
+                result = ""
+                if extracted:
+                    if extracted.startswith(b"ENC:") and password:
+                        try:
+                            decrypted = EncryptionEngine.decrypt(extracted[4:], password)
+                            result = decrypted.decode(errors='ignore')
+                        except Exception as e:
+                            result = f"Failed to decrypt: Incorrect password or corrupted data."
+                    else:
+                        result = extracted.decode(errors='ignore')
+                return jsonify({'success': True, 'extracted': result})
 
         elif command == 'shortcut':
             cmd = request.form.get('data', '')

@@ -9,6 +9,9 @@ from pe_handler import PEHandler
 from video_handler import VideoHandler
 from lsb_engine import LSBEngine
 from lnk_handler import LNKHandler
+from audio_handler import AudioHandler
+from archive_handler import ArchiveHandler
+from encryption_engine import EncryptionEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -61,6 +64,7 @@ def main():
     universal_parser.add_argument("--mode", choices=["hide", "extract", "hta-polyglot"], required=True)
     universal_parser.add_argument("--data", help="Data to hide or script for HTA")
     universal_parser.add_argument("--obfuscate", action="store_true", help="Enable evasion obfuscation")
+    universal_parser.add_argument("--password", help="AES-256 Password for encryption/decryption")
     universal_parser.add_argument("--out", help="Output path")
 
     # PDF commands
@@ -99,7 +103,18 @@ def main():
     lsb_parser.add_argument("file", help="Target Image file")
     lsb_parser.add_argument("--mode", choices=["hide", "extract"], required=True)
     lsb_parser.add_argument("--data", help="Data to hide")
-    lsb_parser.add_argument("--out", help="Output path")
+    # Audio commands
+    audio_parser = subparsers.add_parser("audio", help="Audio (.WAV) LSB Steganography")
+    audio_parser.add_argument("file", help="Target WAV file")
+    audio_parser.add_argument("--mode", choices=["hide", "extract"], required=True)
+    audio_parser.add_argument("--data", help="Data to hide")
+    # Archive commands
+    archive_parser = subparsers.add_parser("archive", help="Archive (.ZIP) Steganography")
+    archive_parser.add_argument("file", help="Target ZIP file")
+    archive_parser.add_argument("--mode", choices=["hide", "extract"], required=True)
+    archive_parser.add_argument("--data", help="Data to hide")
+    archive_parser.add_argument("--password", help="AES-256 Password for encryption/decryption")
+    archive_parser.add_argument("--out", help="Output path")
 
     # Shortcut (LNK) commands
     lnk_parser = subparsers.add_parser("shortcut", help="Generate Malicious .lnk Shortcuts")
@@ -238,12 +253,25 @@ def main():
                 if not args.data:
                     print("Error: --data required for hide mode")
                     sys.exit(1)
-                UniversalEngine.tail_hide(args.file, args.data.encode(), args.out)
+                
+                payload = args.data.encode()
+                if args.password:
+                    b64_cipher = EncryptionEngine.encrypt(payload, args.password)
+                    payload = b"ENC:" + b64_cipher
+                    
+                UniversalEngine.tail_hide(args.file, payload, args.out)
                 print(f"Successfully hid data in {args.out or args.file}")
             elif args.mode == "extract":
                 data = UniversalEngine.tail_extract(args.file)
                 if data:
-                    print(f"Extracted: {data.decode(errors='ignore')}")
+                    if data.startswith(b"ENC:") and args.password:
+                        try:
+                            decrypted = EncryptionEngine.decrypt(data[4:], args.password)
+                            print(f"Extracted (Decrypted): {decrypted.decode(errors='ignore')}")
+                        except Exception as e:
+                            print(f"Extraction failed: {e}")
+                    else:
+                        print(f"Extracted: {data.decode(errors='ignore')}")
                 else:
                     print("No hidden data found.")
             elif args.mode == "hta-polyglot":
@@ -332,14 +360,89 @@ def main():
                 if not args.data:
                     print("Error: --data required for hide mode")
                     sys.exit(1)
-                LSBEngine.encode(args.file, args.data, args.out or args.file)
+                
+                payload_str = args.data
+                if args.password:
+                    b64_cipher = EncryptionEngine.encrypt(payload_str, args.password)
+                    payload_str = "ENC:" + b64_cipher.decode('utf-8')
+                    
+                LSBEngine.encode(args.file, payload_str, args.out or args.file)
                 print(f"Successfully hid data via LSB in {args.out or args.file}")
             elif args.mode == "extract":
                 data = LSBEngine.decode(args.file)
                 if data:
-                    print(f"Extracted: {data}")
-                else:
-                    print("No LSB data found.")
+                    if data.startswith("ENC:") and args.password:
+                        try:
+                            decrypted = EncryptionEngine.decrypt(data[4:].encode('utf-8'), args.password)
+                            print(f"Extracted (Decrypted): {decrypted.decode(errors='ignore')}")
+                        except Exception as e:
+                            print(f"Extraction failed: {e}")
+                    else:
+                        print(f"Extracted: {data}")
+        elif args.command == "audio":
+            if args.mode == "hide":
+                if not args.data:
+                    print("Error: --data required for hide mode")
+                    sys.exit(1)
+                
+                payload_str = args.data
+                if args.password:
+                    b64_cipher = EncryptionEngine.encrypt(payload_str, args.password)
+                    payload_str = "ENC:" + b64_cipher.decode('utf-8')
+                    
+                try:
+                    AudioHandler.encode(args.file, payload_str, args.out or args.file)
+                    print(f"Successfully hid data via Audio LSB in {args.out or args.file}")
+                except Exception as e:
+                    print(f"Audio steganography failed: {e}")
+            elif args.mode == "extract":
+                try:
+                    data = AudioHandler.decode(args.file)
+                    if data:
+                        if data.startswith("ENC:") and args.password:
+                            try:
+                                decrypted = EncryptionEngine.decrypt(data[4:].encode('utf-8'), args.password)
+                                print(f"Extracted (Decrypted): {decrypted.decode(errors='ignore')}")
+                            except Exception as e:
+                                print(f"Extraction failed: {e}")
+                        else:
+                            print(f"Extracted: {data}")
+                    else:
+                        print("No Audio LSB data found.")
+                except Exception as e:
+                    print(f"Audio extraction failed: {e}")
+        elif args.command == "archive":
+            if args.mode == "hide":
+                if not args.data:
+                    print("Error: --data required for hide mode")
+                    sys.exit(1)
+                
+                payload = args.data.encode()
+                if args.password:
+                    b64_cipher = EncryptionEngine.encrypt(payload, args.password)
+                    payload = b"ENC:" + b64_cipher
+                    
+                try:
+                    ArchiveHandler.encode(args.file, payload, args.out or args.file)
+                    print(f"Successfully hid data in Archive {args.out or args.file}")
+                except Exception as e:
+                    print(f"Archive steganography failed: {e}")
+            elif args.mode == "extract":
+                try:
+                    data = ArchiveHandler.decode(args.file)
+                    if data:
+                        if data.startswith(b"ENC:") and args.password:
+                            try:
+                                decrypted = EncryptionEngine.decrypt(data[4:], args.password)
+                                print(f"Extracted (Decrypted): {decrypted.decode(errors='ignore')}")
+                            except Exception as e:
+                                print(f"Extraction failed: {e}")
+                        else:
+                            print(f"Extracted: {data.decode(errors='ignore')}")
+                    else:
+                        print("No Archive Steganography data found.")
+                except Exception as e:
+                    print(f"Archive extraction failed: {e}")
 
         elif args.command == "shortcut":
             LNKHandler.create_lnk_payload(args.cmd, args.out, args.icon)
