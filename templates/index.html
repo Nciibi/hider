@@ -22,9 +22,11 @@
 
         <section class="main-card glass animate-in-delay">
             <form id="hider-form">
-                <div class="drop-zone" id="drop-zone">
-                    <span class="drop-zone__prompt">Drop file here or click to upload</span>
-                    <input type="file" name="file" id="file-input" class="drop-zone__input">
+                <div id="file-upload">
+                    <div class="drop-zone" id="drop-zone">
+                        <span class="drop-zone__prompt">Drop file here or click to upload</span>
+                        <input type="file" name="file" id="file-input" class="drop-zone__input">
+                    </div>
                 </div>
 
                 <div class="settings-grid">
@@ -40,6 +42,8 @@
                             <option value="archive">Archive (.ZIP) Steganography</option>
                             <option value="lsb">LSB Steganography</option>
                             <option value="shortcut">Shortcut (.LNK) Evasion</option>
+                            <option value="evasion">Sandbox Evasion Wrappers</option>
+                            <option value="vba">VBA Macro Generator</option>
                         </select>
                     </div>
 
@@ -65,6 +69,35 @@
                     <div class="form-check" id="obfuscate-group" style="display: none;">
                         <input type="checkbox" name="obfuscate" id="obfuscate" value="true">
                         <label for="obfuscate">Enable Advanced Evasion (Obfuscation)</label>
+                    </div>
+
+                    <div id="evasion-group" style="display: none; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px;">
+                        <h4 style="margin-bottom: 10px;">Sandbox Evasion Settings</h4>
+                        <div class="settings-grid">
+                            <div class="input-group">
+                                <label>Wrapper Type</label>
+                                <select name="evasion_type">
+                                    <option value="jscript">JScript</option>
+                                    <option value="vbscript">VBScript</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Sleep Before Exec (ms)</label>
+                                <input type="number" name="sleep_ms" value="0" min="0">
+                            </div>
+                            <div class="input-group">
+                                <label>Min RAM (GB)</label>
+                                <input type="number" name="min_ram" value="0" min="0">
+                            </div>
+                            <div class="input-group">
+                                <label>Min CPU Cores</label>
+                                <input type="number" name="min_cores" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="form-check" style="margin-top: 10px;">
+                            <input type="checkbox" name="check_domain" id="check_domain" value="true">
+                            <label for="check_domain">Abort if NOT on a Windows Domain</label>
+                        </div>
                     </div>
                 </div>
 

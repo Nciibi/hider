@@ -12,6 +12,8 @@ from lnk_handler import LNKHandler
 from audio_handler import AudioHandler
 from archive_handler import ArchiveHandler
 from encryption_engine import EncryptionEngine
+from evasion_engine import EvasionEngine
+from macro_engine import MacroEngine
 
 def main():
     parser = argparse.ArgumentParser(description="Hider: EXIF Metadata Security Research Tool")
@@ -116,6 +118,25 @@ def main():
     archive_parser.add_argument("--password", help="AES-256 Password for encryption/decryption")
     archive_parser.add_argument("--out", help="Output path")
 
+    # Evasion commands
+    evasion_parser = subparsers.add_parser("evasion", help="Evasion and Sandbox Bypass Wrappers")
+    evasion_parser.add_argument("--payload", help="Raw payload (e.g. powershell snippet) to wrap", required=True)
+    evasion_parser.add_argument("--type", choices=["jscript", "vbscript"], default="jscript", help="Wrapper Type")
+    evasion_parser.add_argument("--check-domain", action="store_true", help="Abort if not on domain")
+    evasion_parser.add_argument("--min-ram", type=int, default=0, help="Minimum RAM (GB)")
+    evasion_parser.add_argument("--min-cores", type=int, default=0, help="Minimum CPU Cores")
+    evasion_parser.add_argument("--sleep", type=int, default=0, help="Sleep duration (ms) before execution")
+    evasion_parser.add_argument("--out", help="Output file containing the wrapped payload", required=True)
+
+    # VBA Macro Generator commands
+    vba_parser = subparsers.add_parser("vba", help="Generate Malicious VBA Macros")
+    vba_parser.add_argument("--payload", help="Raw payload (e.g. command) to execute natively or after staging", required=True)
+    vba_parser.add_argument("--check-domain", action="store_true", help="Abort if not on domain")
+    vba_parser.add_argument("--min-ram", type=int, default=0, help="Minimum RAM (GB)")
+    vba_parser.add_argument("--min-cores", type=int, default=0, help="Minimum CPU Cores")
+    vba_parser.add_argument("--sleep", type=int, default=0, help="Sleep duration (ms) before execution")
+    vba_parser.add_argument("--out", help="Output .vba file", required=True)
+
     # Shortcut (LNK) commands
     lnk_parser = subparsers.add_parser("shortcut", help="Generate Malicious .lnk Shortcuts")
     lnk_parser.add_argument("--cmd", required=True, help="Command to execute")
@@ -131,7 +152,8 @@ def main():
     try:
         filenames = {
             "view": "image", "edit": "image", "inject": "image", "hide": "image", "extract": "file",
-            "exploit-structure": "image", "universal": "file", "pdf": "file", "office": "file", "dll": "file"
+            "exploit-structure": "image", "universal": "file", "pdf": "file", "office": "file", "dll": "file",
+            "evasion": "file", "vba": "file"
         }
         
         # Determine target file path based on command
@@ -447,6 +469,41 @@ def main():
         elif args.command == "shortcut":
             LNKHandler.create_lnk_payload(args.cmd, args.out, args.icon)
             print(f"Successfully generated malicious shortcut: {args.out}")
+
+        elif args.command == "evasion":
+            if args.type == "jscript":
+                wrapped = EvasionEngine.wrap_jscript(
+                    payload=args.payload, 
+                    check_domain=args.check_domain,
+                    min_ram_gb=args.min_ram,
+                    min_cores=args.min_cores,
+                    sleep_ms=args.sleep
+                )
+            else:
+                wrapped = EvasionEngine.wrap_vbscript(
+                    payload=args.payload, 
+                    check_domain=args.check_domain,
+                    min_ram_gb=args.min_ram,
+                    min_cores=args.min_cores,
+                    sleep_ms=args.sleep
+                )
+            with open(args.out, "w") as f:
+                f.write(wrapped)
+            print(f"Successfully generated evasion wrapper: {args.out}")
+
+        elif args.command == "vba":
+            MacroEngine.generate_vba(
+                payload=args.payload,
+                output_path=args.out,
+                check_domain=args.check_domain,
+                min_ram_gb=args.min_ram,
+                min_cores=args.min_cores,
+                sleep_ms=args.sleep
+            )
+            print(f"Successfully generated VBA macro: {args.out}")
+
+        else:
+            parser.print_help()
 
     except Exception as e:
         print(f"Error: {e}")

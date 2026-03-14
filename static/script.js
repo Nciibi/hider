@@ -64,68 +64,100 @@ document.addEventListener('DOMContentLoaded', () => {
             labels: { generate: 'Command to execute' },
             showObfuscate: [],
             showPassword: []
+        },
+        evasion: {
+            modes: ['generate'],
+            labels: { generate: 'Raw Payload (e.g. powershell -c calc)' },
+            showObfuscate: [],
+            showPassword: [],
+            showEvasionOptions: ['generate']
+        },
+        vba: {
+            modes: ['generate'],
+            labels: { generate: 'Raw Payload to execute' },
+            showObfuscate: [],
+            showPassword: [],
+            showEvasionOptions: ['generate']
         }
     };
 
     function updateForm() {
-        const cmd = commandSelect.value;
-        const mode = modeSelect.value;
-        const cnf = config[cmd];
-
+        const command = commandSelect.value;
+        const configOptions = config[command];
+        
+        // Ensure mode is valid for command by updating mode options
+        modeSelect.innerHTML = configOptions.modes.map(m => `<option value="${m}">${m.replace('-', ' ')}</option>`).join('');
+        // Retain selection if possible
+        const mode = configOptions.modes[0];
+        
+        const keyGroup = document.getElementById('key-group');
         const dataGroup = document.getElementById('data-group');
         const obfuscateGroup = document.getElementById('obfuscate-group');
+        const passwordGroup = document.getElementById('password-group');
+        const evasionGroup = document.getElementById('evasion-group');
+        const fileUploadGroup = document.getElementById('file-upload');
         const dataLabel = document.getElementById('data-label');
-        const keyGroup = document.getElementById('key-group'); // Assuming this element exists in HTML
 
-        // Ensure mode is valid for command
-        if (!cnf.modes.includes(modeSelect.value)) {
-            modeSelect.innerHTML = cnf.modes.map(m => `<option value="${m}">${m.replace('-', ' ')}</option>`).join('');
-            modeSelect.value = cnf.modes[0];
+        if (fileUploadGroup) {
+            if (['shortcut', 'evasion', 'vba'].includes(command)) {
+                fileUploadGroup.style.display = 'none';
+                fileInput.removeAttribute('required');
+            } else {
+                fileUploadGroup.style.display = 'block';
+                fileInput.setAttribute('required', 'required');
+            }
         }
-
-        const currentMode = modeSelect.value;
 
         // Toggle Key/Value vs Data
-        if (['edit'].includes(currentMode) && ['pdf', 'office', 'video'].includes(cmd)) {
-            keyGroup.style.display = 'block';
-            dataGroup.style.display = 'block';
-            dataLabel.textContent = cnf.labels[currentMode] || 'Value';
-        } else if (['view', 'extract'].includes(currentMode)) {
-            keyGroup.style.display = 'none';
-            dataGroup.style.display = 'none';
-            if (cmd === 'dll' && currentMode === 'hide') {
-                 dataGroup.style.display = 'block';
-                 dataLabel.textContent = 'Data to hide';
+        if (['edit'].includes(mode) && ['pdf', 'office', 'video'].includes(command)) {
+            if(keyGroup) keyGroup.style.display = 'block';
+            if(dataGroup) dataGroup.style.display = 'block';
+            if(dataLabel) dataLabel.textContent = configOptions.labels[mode] || 'Value';
+        } else if (['view', 'extract'].includes(mode)) {
+            if(keyGroup) keyGroup.style.display = 'none';
+            if(dataGroup) dataGroup.style.display = 'none';
+            if (command === 'dll' && mode === 'hide') {
+                 if(dataGroup) dataGroup.style.display = 'block';
+                 if(dataLabel) dataLabel.textContent = 'Data to hide';
             }
         } else {
-            keyGroup.style.display = 'none';
-            dataGroup.style.display = 'block';
-            dataLabel.textContent = cnf.labels[currentMode] || 'Payload / Data';
+            if(keyGroup) keyGroup.style.display = 'none';
+            if(dataGroup) dataGroup.style.display = 'block';
+            if(dataLabel) dataLabel.textContent = configOptions.labels[mode] || 'Payload / Data';
         }
-        
+
         // Hide Data field for view/extract universally
-        if(currentMode === 'view' || currentMode === 'extract') {
-             dataGroup.style.display = 'none';
+        if(mode === 'view' || mode === 'extract') {
+             if(dataGroup) dataGroup.style.display = 'none';
         }
 
         // Toggle Obfuscate
-        if (cnf.showObfuscate && cnf.showObfuscate.includes(currentMode)) {
-            obfuscateGroup.style.display = 'flex';
+        if (configOptions.showObfuscate && configOptions.showObfuscate.includes(mode)) {
+            if(obfuscateGroup) obfuscateGroup.style.display = 'flex';
         } else {
-            obfuscateGroup.style.display = 'none';
+            if(obfuscateGroup) obfuscateGroup.style.display = 'none';
         }
 
         // Toggle Password
-        const passwordGroup = document.getElementById('password-group'); // Assuming this element exists in HTML
-        if (cnf.showPassword && cnf.showPassword.includes(currentMode)) {
-            passwordGroup.style.display = 'block';
+        if (configOptions.showPassword && configOptions.showPassword.includes(mode)) {
+            if(passwordGroup) passwordGroup.style.display = 'block';
         } else {
-            passwordGroup.style.display = 'none';
+            if(passwordGroup) passwordGroup.style.display = 'none';
+        }
+
+        // Toggle Evasion Options
+        if (configOptions.showEvasionOptions && configOptions.showEvasionOptions.includes(mode)) {
+            if(evasionGroup) evasionGroup.style.display = 'block';
+        } else {
+            if(evasionGroup) evasionGroup.style.display = 'none';
         }
     }
 
     commandSelect.addEventListener('change', updateForm);
-    modeSelect.addEventListener('change', updateForm);
+    // modeSelect is now entirely driven by commandSelect redraw, but we can bind to changes if needed:
+    modeSelect.addEventListener('change', () => {
+        // partial update if we had multi modes
+    });
 
     // Initial load
     updateModes();
