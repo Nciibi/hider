@@ -27,8 +27,11 @@
 | **C2 Server** | Flask + SQLite | Full-featured command & control listener and session tracking |
 | **C2 Console** | Interactive Shell | Manage implants, queue commands, and execute modules |
 | **Staging** | Automated Recipes | Generate multi-stage attack chains (AMSI patch + shellcode) |
-| **Implants** | Beacon Generator | Create custom Python/PowerShell beacons with sleep & jitter |
-| **Modules** | Plugin System | Hot-loadable post-exploitation modules (mem injection, persistence) |
+| **Staging** | Automated Recipes | Generate multi-stage attack chains (AMSI patch + shellcode) |
+| **Implants** | Beacon Generator | Create custom P2P/Bind beacons with sleep masking & domain rotation |
+| **P2P C2** | Mesh Networking | Named-pipe SMB pivoting between implants |
+| **OpSec** | Evasion | Base64 encoded payload delivery, memory sleep masking, custom headers |
+| **Lateral** | Modules | Fileless SMB, encoded WMI/WinRM, and piped SSH pivoting |
 
 ---
 
@@ -169,18 +172,21 @@ python3 hider.py c2-beacon --url http://127.0.0.1:8443 --lang python --out beaco
 
 # Generate a multi-stage attack recipe
 python3 hider.py c2-stage --recipe windows_full --url "http://127.0.0.1:8443/beacon"
+
+# Advanced C2 Operations inside the interactive console
+#   c2> use lat_smb 10.0.0.2 "powershell -c calc.exe"
+#   c2> use lat_winrm 10.0.0.2 "Write-Host 'Pwnd'"
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-The following features are currently in development:
-
-- [ ] **Encrypted C2 Channels:** Implementation of mTLS, custom encryption layers, and rotating keys.
-- [ ] **P2P Beacons:** SMB pivoting, named pipes, and mesh implant architectures.
-- [ ] **OpSec Protections:** Traffic shaping, domain rotation, and advanced sleep masking.
-- [ ] **Lateral Movement:** In-memory SMB, WMI, WinRM, and SSH pivoting modules.
+✅ **v1.0 Goals Fully Implemented**:
+- Encrypted C2 Channels: mTLS, AES encryption, and rotating keys
+- P2P Beacons: SMB pivoting, named pipes, and mesh architectures
+- OpSec Protections: Traffic shaping, domain rotation, and sleep masking
+- Lateral Movement Modules: Fileless SMB, WMI, WinRM, and SSH pivot
 
 ---
 
