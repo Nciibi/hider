@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Hider Logo" width="400">
+</p>
+
 # 🕵️ Hider — Advanced Steganography & Security Research Tool
 
 > A powerful CLI and web-based toolkit for metadata manipulation, steganography, and payload delivery — built for penetration testers and security researchers.
