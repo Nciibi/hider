@@ -6,7 +6,7 @@ from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PE
 
 app = Flask(__name__) 
 app.secret_key = secrets.token_hex(16)
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = 'uploads' 
 OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
