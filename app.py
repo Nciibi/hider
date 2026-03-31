@@ -3,7 +3,7 @@ import secrets
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from hider import MetadataEngine, UniversalEngine, PDFHandler, OfficeHandler, PEHandler, VideoHandler, LSBEngine, LNKHandler, EncryptionEngine, AudioHandler, ArchiveHandler, EvasionEngine, MacroEngine
-
+ 
 app = Flask(__name__)   
 app.secret_key = secrets.token_hex(16)
 UPLOAD_FOLDER = 'uploads'  
